@@ -21,7 +21,39 @@ by demo-infra on **Corretto 17 running on 64bit Amazon Linux 2023**.
 curl --fail --upload-file target/ops-console.jar "$PRESIGNED_PUT_URL"
 ```
 
-3. Call these AWS APIs via `run_script` (no deployment CLI):
+3. Set the API URL through CloudFormation `UpdateStack` on `brahma-demo-staging`
+   via `aws___run_script`. `AccountsApiUrl` is the source of truth for
+   `ACCOUNTS_API_URL`; the stack also owns port 5000 and health path `/healthz`.
+   Supply the bootstrap execution-role output and the observed API Service URL:
+
+```python
+import boto3
+
+session = boto3.Session(region_name="us-east-1")
+cfn = session.client("cloudformation")
+stack = cfn.describe_stacks(StackName="brahma-demo-staging")["Stacks"][0]
+api_url = "http://<accounts-api-load-balancer-hostname>"
+parameters = [
+    {"ParameterKey": p["ParameterKey"], "ParameterValue": api_url}
+    if p["ParameterKey"] == "AccountsApiUrl"
+    else {"ParameterKey": p["ParameterKey"], "UsePreviousValue": True}
+    for p in stack["Parameters"]
+]
+if next(p["ParameterValue"] for p in stack["Parameters"]
+        if p["ParameterKey"] == "AccountsApiUrl") != api_url:
+    cfn.update_stack(
+        StackName="brahma-demo-staging", UsePreviousTemplate=True,
+        RoleARN="<DextoDemoCfnExecRoleArn>",
+        Capabilities=["CAPABILITY_NAMED_IAM"], Parameters=parameters,
+        Tags=stack.get("Tags", []),
+    )
+```
+
+   Poll `describe_stacks` in subsequent `run_script` calls until `UPDATE_COMPLETE`;
+   report stack events on failure. If the URL already matches, skip the update
+   and require a stable `CREATE_COMPLETE` or `UPDATE_COMPLETE` stack. Retain every
+   other parameter with `UsePreviousValue=true` and retain stack tags. Then deploy
+   the application version through `run_script`:
 
 ```python
 import boto3
@@ -39,14 +71,6 @@ eb.create_application_version(
 )
 eb.update_environment(
     EnvironmentName="ops-console-staging", VersionLabel=sha,
-    OptionSettings=[
-        {"Namespace": "aws:elasticbeanstalk:application:environment",
-         "OptionName": "SERVER_PORT", "Value": "5000"},
-        {"Namespace": "aws:elasticbeanstalk:application:environment",
-         "OptionName": "ACCOUNTS_API_URL", "Value": "http://<accounts-api-load-balancer-hostname>"},
-        {"Namespace": "aws:elasticbeanstalk:application",
-         "OptionName": "Application Healthcheck URL", "Value": "/healthz"},
-    ],
 )
 for _ in range(120):
     env = eb.describe_environments(EnvironmentNames=["ops-console-staging"])["Environments"][0]
@@ -61,9 +85,9 @@ else:
 ```
 
 Return to separate `run_script` calls to poll if the server's execution timeout is
-shorter than deployment. `ACCOUNTS_API_URL` **must** be set as an EB environment
-property to the deployed accounts-api URL. `/healthz` alone does not test that
-connection. Set the environment properties and health path explicitly as above.
+shorter than deployment. CloudFormation supplies `ACCOUNTS_API_URL` from
+`AccountsApiUrl`; application deployments change only `VersionLabel` through EB.
+`/healthz` alone does not test the API connection.
 
 4. Read the environment's CNAME from `describe_environments`, then run the live
    smoke locally against it:

@@ -23,12 +23,14 @@ public class AccountsController {
     @GetMapping("/")
     public String index(@RequestParam(defaultValue = "") String industry,
                         @RequestParam(defaultValue = "") String q,
+                        @RequestParam(name = "high_risk", defaultValue = "false") boolean highRisk,
                         @RequestParam(defaultValue = "0") int offset, Model model) {
         if (offset < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid offset");
-        model.addAttribute("page", accounts.list(industry, q, offset));
+        model.addAttribute("page", accounts.list(industry, q, highRisk, offset));
         model.addAttribute("industries", INDUSTRIES);
         model.addAttribute("industry", industry);
         model.addAttribute("q", q);
+        model.addAttribute("highRisk", highRisk);
         return "accounts";
     }
 

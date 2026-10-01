@@ -1,0 +1,37 @@
+const { test, expect } = require('@playwright/test');
+
+test('risk badges and high-risk server filtering preserve filters and pagination', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Unknown', { exact: true })).toBeVisible();
+  await expect(page.getByText('Low · 39', { exact: true })).toBeVisible();
+  await expect(page.getByText('Medium · 40', { exact: true })).toBeVisible();
+  await expect(page.getByText('High · 70', { exact: true }).first()).toBeVisible();
+  await page.getByLabel('Industry', { exact: true }).selectOption('technology');
+  await page.getByLabel('High-risk only').check();
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByText('52 accounts')).toBeVisible();
+  await expect(page.locator('tbody tr')).toHaveCount(50);
+  await page.getByRole('link', { name: 'Next' }).click();
+  await expect(page).toHaveURL(/high_risk=true/);
+  await expect(page).toHaveURL(/offset=50/);
+  await expect(page.locator('tbody tr')).toHaveCount(2);
+  await page.getByRole('link', { name: 'Previous' }).click();
+  await expect(page.getByLabel('High-risk only')).toBeChecked();
+  await page.getByLabel('Account name').fill('Cedar 05');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await expect(page.getByLabel('High-risk only')).toBeChecked();
+  await page.getByRole('link', { name: 'Cedar 05' }).click();
+  await expect(page.getByText('High · 70')).toBeVisible();
+  await page.goto('/?industry=technology&high_risk=true&offset=0');
+  await expect(page.getByText('52 accounts')).toBeVisible();
+  await page.getByLabel('High-risk only').uncheck();
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByText('55 accounts')).toBeVisible();
+  await page.getByRole('link', { name: 'Next' }).click();
+  await expect(page).toHaveURL(/offset=50/);
+  await expect(page.getByLabel('Industry', { exact: true })).toHaveValue('technology');
+  await expect(page.locator('tbody tr')).toHaveCount(5);
+  await page.getByRole('link', { name: 'Previous' }).click();
+  await expect(page.locator('tbody tr')).toHaveCount(50);
+});

@@ -12,22 +12,24 @@
 <option th:each="item : ${industries}" th:value="${item}" th:text="${item}" th:selected="${item == industry}"></option>
 </select></div>
 <div class="field"><label for="q">Account name</label><input id="q" name="q" type="search" placeholder="Search accounts" th:value="${q}"></div>
+<div class="field"><label class="checkbox-label" for="high_risk"><input id="high_risk" name="high_risk" type="checkbox" value="true" th:checked="${highRisk}"> High-risk only</label></div>
 <button type="submit">Apply filters</button><a href="/" class="reset">Reset</a>
 </form>
 <section class="card" aria-label="Account directory">
 <div class="table-heading"><h2>Customer directory</h2><span th:text="${page.total + ' accounts'}"></span></div>
-<div class="table-scroll"><table><thead><tr><th>Name</th><th>Industry</th><th>Country</th><th>Plan</th><th class="numeric">Monthly spend (USD)</th><th class="numeric">Open tickets</th></tr></thead>
+<div class="table-scroll"><table><thead><tr><th>Name</th><th>Industry</th><th>Country</th><th>Plan</th><th class="numeric">Monthly spend (USD)</th><th class="numeric">Open tickets</th><th>Risk score</th></tr></thead>
 <tbody><tr th:each="account : ${page.accounts}">
 <td><a th:href="@{/accounts/{id}(id=${account.id})}" th:text="${account.name}"></a></td>
 <td th:text="${account.industry}"></td><td th:text="${account.country}"></td>
 <td><span class="badge" th:text="${account.plan}"></span></td>
 <td class="numeric" th:text="${#numbers.formatDecimal(account.monthlySpendUsd, 1, 'COMMA', 2, 'POINT')}"></td>
-<td class="numeric" th:text="${account.openTickets}"></td></tr>
-<tr th:if="${page.accounts.isEmpty()}"><td colspan="6" class="empty">No accounts match these filters.</td></tr>
+<td class="numeric" th:text="${account.openTickets}"></td>
+<td><span class="risk-badge" th:classappend="${account.riskClass}" th:text="${account.riskLabel + (account.riskScore == null ? '' : ' · ' + account.riskScore)}"></span></td></tr>
+<tr th:if="${page.accounts.isEmpty()}"><td colspan="7" class="empty">No accounts match these filters.</td></tr>
 </tbody></table></div>
 <nav class="pagination" aria-label="Pagination">
-<a th:if="${page.offset > 0}" th:href="@{/(industry=${industry},q=${q},offset=${T(java.lang.Math).max(0,page.offset-page.limit)})}">Previous</a>
+<a th:if="${page.offset > 0}" th:href="@{/(industry=${industry},q=${q},high_risk=${highRisk ? true : null},offset=${T(java.lang.Math).max(0,page.offset-page.limit)})}">Previous</a>
 <span th:text="${'Showing ' + page.accounts.size() + ' of ' + page.total}"></span>
-<a th:if="${page.offset + page.limit < page.total}" th:href="@{/(industry=${industry},q=${q},offset=${page.offset+page.limit})}">Next</a>
+<a th:if="${page.offset + page.limit < page.total}" th:href="@{/(industry=${industry},q=${q},high_risk=${highRisk ? true : null},offset=${page.offset+page.limit})}">Next</a>
 </nav></section>
 </main><footer>Internal operations · Synthetic demo data</footer></body></html>

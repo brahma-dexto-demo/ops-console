@@ -1,6 +1,6 @@
 # Operations Console
 
-Internal operations console. Renders customer account tables and details from accounts-api, with name search, industry filtering and pagination.
+Internal operations console. Renders customer account tables and details from accounts-api, with name search, industry filtering and pagination, risk-score badges, and a server-backed high-risk filter.
 
 This is a demo repository backed by synthetic, fictional accounts.
 
@@ -30,3 +30,14 @@ BASE_URL=http://localhost:5000 npm test
 ```
 
 See [DEPLOY.md](DEPLOY.md) for the AWS API staging flow.
+
+Risk scores come directly from accounts-api's `risk_score` field: Low 0–39, Medium 40–69, High 70–100, or Unknown when null/missing. High-risk only sends `high_risk=true` to the API and retains industry/name filters across pagination. It never infers scores from other fields.
+
+Run deterministic risk browser tests against a local mock API and console (after `./mvnw -B package`):
+
+```sh
+cd e2e
+npm ci
+npx playwright install chromium
+./run-mocked.sh
+```

@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 test('risk badges and high-risk server filtering preserve filters and pagination', async ({ page }) => {
+  test.skip(!process.env.MOCK_API, 'Boundary fixture assertions run against the mocked API');
   await page.goto('/');
   await expect(page.getByText('Unknown', { exact: true })).toBeVisible();
   await expect(page.getByText('Low · 39', { exact: true })).toBeVisible();

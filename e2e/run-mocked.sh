@@ -10,4 +10,4 @@ for i in $(seq 1 60); do
   if curl -fsS http://127.0.0.1:18101/healthz >/dev/null 2>&1; then break; fi
   sleep 1
 done
-BASE_URL=http://127.0.0.1:18101 npx playwright test risk.spec.js
+MOCK_API=1 BASE_URL=http://127.0.0.1:18101 npx playwright test risk.spec.js

@@ -1,0 +1,13 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+  build:
+    commands:
+      - ./mvnw -B package -DskipTests
+  post_build:
+    commands:
+      - test "$CODEBUILD_BUILD_SUCCEEDING" = "1"
+      - aws s3 cp target/ops-console.jar "s3://$ARTIFACTS_BUCKET/ops-console/$CODEBUILD_RESOLVED_SOURCE_VERSION.jar"
+      - echo "ops-console/$CODEBUILD_RESOLVED_SOURCE_VERSION.jar"

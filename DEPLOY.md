@@ -1,25 +1,52 @@
 # Staging deployment
 
-Use Java 17+ on the computer for the build. All AWS API calls run with boto3 through
-the managed AWS MCP Server (`aws___run_script`) under `DextoDemoRole`; there are no
+Build and publish the JAR inside AWS CodeBuild with Corretto 17. All deployer AWS
+API calls run with boto3 through the managed AWS MCP Server (`aws___run_script`) under `DextoDemoRole`; there are no
 local AWS credentials and no AWS CLI. Region is `us-east-1`. The `ops-console`
 application and single-instance `ops-console-staging` environment are provisioned
 by demo-infra on **Corretto 17 running on 64bit Amazon Linux 2023**.
 
-1. Commit changes, record the full SHA, and build:
+1. Commit changes, record the full SHA, and publish that revision through GitHub
+   so CodeBuild can fetch it. Use `aws___run_script` to start `ops-console-jar` at
+   that SHA. The project's `ARTIFACTS_BUCKET` comes from demo-infra; its service
+   role publishes the JAR with AWS CLI inside the build container. Buildspec
+   selects Corretto 17 and only builds/publishes; it does not deploy.
 
-```sh
-./mvnw -B package
+```python
+import boto3
+
+sha = "<sha>"  # Full published source revision
+codebuild = boto3.Session(region_name="us-east-1").client("codebuild")
+build_id = codebuild.start_build(
+    projectName="ops-console-jar", sourceVersion=sha,
+)["build"]["id"]
+print({"build_id": build_id})
 ```
 
-2. Resolve the account with boto3 `sts.get_caller_identity()["Account"]` in
-   `run_script`. Use `aws___get_presigned_url` to obtain an S3 **PUT** URL for bucket
-   `brahma-demo-artifacts-<account>`, key `ops-console/<sha>.jar`. Upload the actual
-   executable JAR locally using that URL (do not expose the signed URL in logs):
+2. Poll in subsequent `aws___run_script` calls using the returned build ID:
 
-```sh
-curl --fail --upload-file target/ops-console.jar "$PRESIGNED_PUT_URL"
+```python
+import boto3
+
+sha = "<sha>"
+build_id = "<build-id>"
+codebuild = boto3.Session(region_name="us-east-1").client("codebuild")
+build = codebuild.batch_get_builds(ids=[build_id])["builds"][0]
+status = build["buildStatus"]
+if status in {"FAILED", "FAULT", "STOPPED", "TIMED_OUT"}:
+    raise RuntimeError(f"Build {build_id}: {status}; inspect build['logs']")
+if status == "SUCCEEDED":
+    if build["resolvedSourceVersion"] != sha:
+        raise RuntimeError("Build source does not match the requested SHA")
+    print({"build_id": build_id, "status": status,
+           "s3_key": f"ops-console/{build['resolvedSourceVersion']}.jar"})
+else:
+    print({"build_id": build_id, "status": status})  # Resume polling
 ```
+
+   Require `SUCCEEDED` and the expected SHA before proceeding. The printed S3 key
+   is the source bundle for the EB application version below; retain it and the
+   build ID in the delivery report.
 
 3. Set the API URL through CloudFormation `UpdateStack` on `brahma-demo-staging`
    via `aws___run_script`. `AccountsApiUrl` is the source of truth for

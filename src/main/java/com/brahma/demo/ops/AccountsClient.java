@@ -13,11 +13,12 @@ public class AccountsClient {
         this.client = builder.baseUrl(baseUrl).build();
     }
 
-    public AccountsPage list(String industry, String q, int offset) {
+    public AccountsPage list(String industry, String q, boolean highRisk, int offset) {
         return client.get().uri(builder -> {
             builder.path("/accounts").queryParam("limit", 50).queryParam("offset", offset);
             if (industry != null && !industry.isBlank()) builder.queryParam("industry", "{industry}");
             if (q != null && !q.isBlank()) builder.queryParam("q", "{q}");
+            if (highRisk) builder.queryParam("high_risk", "true");
             var variables = new java.util.HashMap<String, String>();
             variables.put("industry", industry == null ? "" : industry);
             variables.put("q", q == null ? "" : q);

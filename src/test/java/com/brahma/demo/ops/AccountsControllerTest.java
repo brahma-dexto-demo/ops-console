@@ -21,15 +21,50 @@ class AccountsControllerTest {
     @Autowired MockMvc mvc;
     @MockBean AccountsClient client;
     private final Account account = new Account("acct_0001", "Cedar Labs", "technology", "US",
-            "business", new BigDecimal("1234.50"), 3, 12, LocalDate.of(2024, 1, 2));
+            "business", new BigDecimal("1234.50"), 3, 12, LocalDate.of(2024, 1, 2), 70);
 
     @Test
     void rendersFilteredTable() throws Exception {
-        when(client.list("technology", "Cedar", 0)).thenReturn(new AccountsPage(List.of(account), 1, 50, 0));
+        when(client.list("technology", "Cedar", false, 0)).thenReturn(new AccountsPage(List.of(account), 1, 50, 0));
         mvc.perform(get("/").param("industry", "technology").param("q", "Cedar"))
                 .andExpect(status().isOk()).andExpect(view().name("accounts"))
                 .andExpect(content().string(containsString("Cedar Labs")))
                 .andExpect(content().string(containsString("1,234.50")));
+    }
+
+    @Test
+    void riskLabelsAndPaginationPreserveServerFilter() throws Exception {
+        when(client.list("technology", "Cedar", true, 50))
+                .thenReturn(new AccountsPage(List.of(account), 101, 50, 50));
+        mvc.perform(get("/").param("industry", "technology").param("q", "Cedar")
+                        .param("high_risk", "true").param("offset", "50"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("risk-high")))
+                .andExpect(content().string(containsString("High · 70")))
+                .andExpect(content().string(containsString("high_risk=true")))
+                .andExpect(content().string(containsString("offset=100")))
+                .andExpect(content().string(containsString("offset=0")));
+    }
+
+    @Test
+    void showsAllRiskBandsIncludingUnknown() throws Exception {
+        var low = new Account("low", "Low", "retail", "US", "basic", BigDecimal.ONE, 0, 0, LocalDate.now(), 39);
+        var medium = new Account("medium", "Medium", "retail", "US", "basic", BigDecimal.ONE, 0, 0, LocalDate.now(), 40);
+        var mediumMax = new Account("medium-max", "Medium max", "retail", "US", "basic", BigDecimal.ONE, 0, 0, LocalDate.now(), 69);
+        var highMax = new Account("high-max", "High max", "retail", "US", "basic", BigDecimal.ONE, 0, 0, LocalDate.now(), 100);
+        var unknown = new Account("unknown", "Unknown", "retail", "US", "basic", BigDecimal.ONE, 0, 0, LocalDate.now(), null);
+        when(client.list("", "", false, 0)).thenReturn(new AccountsPage(List.of(low, medium, mediumMax, account, highMax, unknown), 6, 50, 0));
+        mvc.perform(get("/"))
+                .andExpect(content().string(containsString("Low · 39")))
+                .andExpect(content().string(containsString("Medium · 40")))
+                .andExpect(content().string(containsString("Medium · 69")))
+                .andExpect(content().string(containsString("High · 70")))
+                .andExpect(content().string(containsString("High · 100")))
+                .andExpect(content().string(containsString("risk-unknown")));
+        when(client.get("unknown")).thenReturn(unknown);
+        mvc.perform(get("/accounts/unknown"))
+                .andExpect(content().string(containsString("Risk score")))
+                .andExpect(content().string(containsString("risk-unknown")));
     }
 
     @Test
@@ -42,7 +77,7 @@ class AccountsControllerTest {
 
     @Test
     void rendersEmptyState() throws Exception {
-        when(client.list("", "unknown", 0)).thenReturn(new AccountsPage(List.of(), 0, 50, 0));
+        when(client.list("", "unknown", false, 0)).thenReturn(new AccountsPage(List.of(), 0, 50, 0));
         mvc.perform(get("/").param("q", "unknown")).andExpect(status().isOk())
                 .andExpect(content().string(containsString("No accounts match")));
     }

@@ -24,3 +24,10 @@ th { font-size: 12px; color: #66758a; background: #fafbfc; } tbody tr:hover { ba
 dt { color: #66758a; } dd { margin: 0; font-weight: 600; } footer { max-width: 1220px; margin: 24px auto; padding: 0 24px; color: #7c8899; font-size: 12px; }
 :focus-visible { outline: 3px solid #80abe9; outline-offset: 3px; }
 @media (max-width: 600px) { main { padding: 0 16px; } .filters .field, input { width: 100%; } dl { grid-template-columns: 1fr 1fr; } }
+
+/* Text identifies the score and band independently of color. */
+.risk-badge { display: inline-block; font-weight: 600; font-variant-numeric: tabular-nums; }
+.risk-low { color: #166534; background: #dcfce7; }
+.risk-medium { color: #854d0e; background: #fef3c7; }
+.risk-high { color: #991b1b; background: #fee2e2; }
+.risk-unknown { color: #374151; background: #e5e7eb; }

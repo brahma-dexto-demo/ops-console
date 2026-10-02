@@ -30,3 +30,28 @@ BASE_URL=http://localhost:5000 npm test
 ```
 
 See [DEPLOY.md](DEPLOY.md) for the AWS API staging flow.
+
+## Risk scores
+
+The console explicitly maps the API's snake_case `risk_score` to nullable Java
+`Integer`. Directory and detail badges show Low (0–39, green), Medium (40–69,
+amber), High (70–100, red), or Unknown (null/absent, neutral). Text and accessible
+labels carry the band and score, so color is not the only indicator. The console
+does not calculate scores or convert upstream failures into Unknown.
+
+The Risk filter sends `high_risk=true` to the API; the API filters scores >=70
+before pagination and total calculation. Search, industry and pagination retain
+this selection; applying filters resets the offset, and Reset clears all controls.
+Merge/roll out **risk-engine → accounts-api → ops-console**. The score field is
+additive; old API responses without it render Unknown. The high-risk browser
+smoke requires at least one scored high-risk account in the producer artifact.
+
+For the isolated account-risk-score worktree:
+
+```sh
+export JAVA_HOME=/workspace/toolchains/java17
+export PATH="$JAVA_HOME/bin:$PATH"
+./mvnw -B verify
+SERVER_PORT=5101 ACCOUNTS_API_URL=http://localhost:8101 java -jar target/ops-console.jar
+# Browser smoke target: BASE_URL=http://localhost:5101
+```

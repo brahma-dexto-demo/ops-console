@@ -126,4 +126,7 @@ npx playwright install chromium
 BASE_URL=http://<environment-cname> npm test
 ```
 
-The smoke checks the directory, industry filter, name search, and account detail.
+Merge and roll out risk-engine, then accounts-api, then ops-console. The smoke
+checks directory/detail risk badges, industry and name filters, and persistence of
+the API-backed high-risk filter. Seed at least one score >=70; pagination is
+checked when the filtered dataset spans multiple pages.

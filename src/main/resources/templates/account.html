@@ -6,6 +6,7 @@
 <main><a href="/" class="back">← All accounts</a><p class="eyebrow">ACCOUNT DETAILS</p>
 <h1 th:text="${account.name}"></h1><p class="intro" th:text="${account.id}"></p>
 <section class="card details" aria-label="Account details"><dl>
+<dt>Risk score</dt><dd><span class="badge risk-badge" th:classappend="${account.riskClass()}" th:text="${account.riskLabel()}" th:attr="aria-label=${'Risk: ' + account.riskLabel()}"></span></dd>
 <dt>Industry</dt><dd th:text="${account.industry}"></dd>
 <dt>Country</dt><dd th:text="${account.country}"></dd>
 <dt>Plan</dt><dd th:text="${account.plan}"></dd>

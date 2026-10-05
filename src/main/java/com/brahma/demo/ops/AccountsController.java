@@ -23,17 +23,28 @@ public class AccountsController {
     @GetMapping("/")
     public String index(@RequestParam(defaultValue = "") String industry,
                         @RequestParam(defaultValue = "") String q,
-                        @RequestParam(defaultValue = "0") int offset, Model model) {
+                        @RequestParam(defaultValue = "0") int offset,
+                        @RequestParam(name = "high_risk", defaultValue = "false") boolean highRisk, Model model) {
         if (offset < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid offset");
-        model.addAttribute("page", accounts.list(industry, q, offset));
+        model.addAttribute("page", accounts.list(industry, q, offset, highRisk));
         model.addAttribute("industries", INDUSTRIES);
         model.addAttribute("industry", industry);
         model.addAttribute("q", q);
+        model.addAttribute("highRisk", highRisk);
         return "accounts";
     }
 
     @GetMapping("/accounts/{id}")
-    public String detail(@PathVariable String id, Model model) {
+    public String detail(@PathVariable String id,
+                         @RequestParam(defaultValue = "") String industry,
+                         @RequestParam(defaultValue = "") String q,
+                         @RequestParam(defaultValue = "0") int offset,
+                         @RequestParam(name = "high_risk", defaultValue = "false") boolean highRisk, Model model) {
+        if (offset < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid offset");
+        model.addAttribute("industry", industry);
+        model.addAttribute("q", q);
+        model.addAttribute("offset", offset);
+        model.addAttribute("highRisk", highRisk);
         try {
             model.addAttribute("account", accounts.get(id));
         } catch (HttpClientErrorException.NotFound ex) {

@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
+<span th:fragment="badge(account)" class="badge risk-badge" th:classappend="${account.riskClass()}"
+      th:text="${account.riskScore == null ? account.riskLabel() : account.riskLabel() + ' · ' + account.riskScore}"></span>
+</body></html>
